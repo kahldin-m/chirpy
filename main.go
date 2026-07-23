@@ -5,10 +5,11 @@ import (
 )
 
 func main() {
-	servMux := http.NewServeMux()
+	mux := http.NewServeMux()
+	mux.Handle("/", http.FileServer(http.Dir(".")))
 	serverNew := http.Server{
 		Addr: ":8080",
-		Handler: servMux,
+		Handler: mux,
 	}
 	serverNew.ListenAndServe()
 
