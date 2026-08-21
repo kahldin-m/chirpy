@@ -44,7 +44,7 @@ func (cfg *apiConfig) handlerValidateChirp(w http.ResponseWriter, r *http.Reques
     }
 
     type returnVals struct {
-    	Valid bool `json:"valid"`
+     	CleanedBody string `json:"cleaned_body"`
     }
 
     decoder := json.NewDecoder(r.Body)
@@ -60,7 +60,8 @@ func (cfg *apiConfig) handlerValidateChirp(w http.ResponseWriter, r *http.Reques
    		respondWithError(w, 400, "Chirp is too long")
      	return
     }
-    respondWithJSON(w, 200, returnVals{Valid: true})
+    cleanedChirp := cleanChirp(params.Body)
+    respondWithJSON(w, 200, returnVals{CleanedBody: cleanedChirp})
     return
 }
 
