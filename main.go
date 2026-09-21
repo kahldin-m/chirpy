@@ -57,7 +57,7 @@ func main() {
 	mux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser)
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
-	mux.HandleFunc("POST /api/validate_chirp", apiCfg.handlerValidateChirp)
+	mux.HandleFunc("POST /api/chirps", apiCfg.handlerChirp)
 	
 	srv := &http.Server{
 		Addr: ":" + port,
@@ -69,16 +69,21 @@ func main() {
 }
 
 
-func (cfg *apiConfig) handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type parameters struct {
 		Body string `json:"body"`
+		UserID uuid.UUID `json:"user_id"`
     }
 
     type returnVals struct {
-     	CleanedBody string `json:"cleaned_body"`
+    	ID uuid.UUID `json:"id"`
+     	CreatedAt time.Time `json:"created_at"`
+      	UpdatedAt time.Time `json:"updated_at"`
+       	Body string `json:"body"`
+        UserID uuid.UUID `json:"user_id"`
     }
-
+    // decoding both fields in parameters
     decoder := json.NewDecoder(r.Body)
     params := parameters{}
     err := decoder.Decode(&params)
@@ -87,13 +92,27 @@ func (cfg *apiConfig) handlerValidateChirp(w http.ResponseWriter, r *http.Reques
 	    respondWithError(w, 500, "Something went wrong")
 	    return
     }
-    // check if we meet or exceed Chirpy char limit
+    // check if we meet or exceed Chirpy char limit (validate)
     if len(params.Body) > 140 {
    		respondWithError(w, 400, "Chirp is too long")
      	return
     }
     cleanedChirp := cleanChirp(params.Body)
-    respondWithJSON(w, 200, returnVals{CleanedBody: cleanedChirp})
+    finalChirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
+    	Body: cleanedChirp,
+     	UserID: params.UserID,
+    })
+    if err != nil {
+    	respondWithError(w, 400, "Error creating chirp")
+     	return
+    }
+    respondWithJSON(w, 201, returnVals{
+    	ID: finalChirp.ID,
+     	CreatedAt: finalChirp.CreatedAt,
+      	UpdatedAt: finalChirp.UpdatedAt,
+      	Body: finalChirp.Body,
+      	UserID: finalChirp.UserID,
+    })
     return
 }
 
