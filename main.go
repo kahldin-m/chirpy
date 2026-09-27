@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -54,10 +53,12 @@ func main() {
 	mux := http.NewServeMux()	
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+	mux.HandleFunc("GET /api/chirps", apiCfg.handlerGetChirps)
 	mux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser)
+	mux.HandleFunc("POST /api/chirps", apiCfg.handlerChirp)
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
-	mux.HandleFunc("POST /api/chirps", apiCfg.handlerChirp)
+
 	
 	srv := &http.Server{
 		Addr: ":" + port,
@@ -68,53 +69,6 @@ func main() {
 	log.Fatal(srv.ListenAndServe())
 }
 
-
-func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "application/json")
-	type parameters struct {
-		Body string `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
-    }
-
-    type returnVals struct {
-    	ID uuid.UUID `json:"id"`
-     	CreatedAt time.Time `json:"created_at"`
-      	UpdatedAt time.Time `json:"updated_at"`
-       	Body string `json:"body"`
-        UserID uuid.UUID `json:"user_id"`
-    }
-    // decoding both fields in parameters
-    decoder := json.NewDecoder(r.Body)
-    params := parameters{}
-    err := decoder.Decode(&params)
-    if err != nil {
-	    log.Printf("Error decoding parameters: %s", err)
-	    respondWithError(w, 500, "Something went wrong")
-	    return
-    }
-    // check if we meet or exceed Chirpy char limit (validate)
-    if len(params.Body) > 140 {
-   		respondWithError(w, 400, "Chirp is too long")
-     	return
-    }
-    cleanedChirp := cleanChirp(params.Body)
-    finalChirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
-    	Body: cleanedChirp,
-     	UserID: params.UserID,
-    })
-    if err != nil {
-    	respondWithError(w, 400, "Error creating chirp")
-     	return
-    }
-    respondWithJSON(w, 201, returnVals{
-    	ID: finalChirp.ID,
-     	CreatedAt: finalChirp.CreatedAt,
-      	UpdatedAt: finalChirp.UpdatedAt,
-      	Body: finalChirp.Body,
-      	UserID: finalChirp.UserID,
-    })
-    return
-}
 
 func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/html; charset=utf-8")
