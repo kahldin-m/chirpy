@@ -8,9 +8,9 @@ import (
 	"os"
 	"sync/atomic"
 	"time"
-	"github.com/google/uuid"
 
 	_ "github.com/lib/pq"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"chirpy/internal/database"
 )
@@ -21,6 +21,7 @@ type apiConfig struct {
 	platform       string
 }
 
+// global struct for storing User data
 type User struct {
 	ID         uuid.UUID `json:"id"`
 	CreatedAt  time.Time `json:"created_at"`
@@ -40,7 +41,7 @@ func main() {
 		log.Fatalf("Failed to Open postgres: %v", err)
 	}
 	dbQueries := database.New(db)
-	
+
 	const filepathRoot = "."
 	const port = "8080"
 
@@ -49,8 +50,8 @@ func main() {
 		db: dbQueries,
 		platform: plat,
 	}
-	
-	mux := http.NewServeMux()	
+
+	mux := http.NewServeMux()
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	mux.HandleFunc("GET /api/chirps", apiCfg.handlerGetChirps)
@@ -61,7 +62,7 @@ func main() {
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 	mux.HandleFunc("POST /api/login", apiCfg.handlerLogin)
 
-	
+
 	srv := &http.Server{
 		Addr: ":" + port,
 		Handler: mux,
@@ -71,7 +72,7 @@ func main() {
 	log.Fatal(srv.ListenAndServe())
 }
 
-
+// Admin handler for visitor metrics
 func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
