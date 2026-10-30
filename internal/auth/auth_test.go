@@ -2,6 +2,9 @@ package auth
 
 import (
 	"testing"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 
@@ -33,8 +36,8 @@ func TestPasswordHash(t *testing.T) {
 	if err != nil {
 		t.Errorf("Test failed: %v", err)
 	}
-	if match {
-		t.Logf("check passed: %v", match)
+	if !match {
+		t.Fatalf("expected password to match")
 	}
 }
 
@@ -45,4 +48,33 @@ func TestSamePasswordHash(t *testing.T) {
 
 	t.Logf("hash1: %v\n", hash1)
 	t.Logf("hash2: %v\n", hash2)
+}
+
+
+
+func TestCreateJWT(t *testing.T) {
+	userID := uuid.New()
+	jawsome, _ := MakeJWT(userID, "mushroom-sauce", time.Hour)
+
+	t.Logf("userID: %v\ntoken: %v", userID, jawsome)
+}
+
+
+
+func TestValidateJWT(t *testing.T) {
+	userID := uuid.New()
+	secretWord := "i-like-turtles"
+	
+	tokenString, err := MakeJWT(userID, secretWord, time.Hour)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	gotID, err := ValidateJWT(tokenString, secretWord) 
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if gotID != userID {
+		t.Errorf("expected: %v\ngot: %v", userID, gotID)
+	}
 }
