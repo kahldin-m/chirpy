@@ -2,7 +2,10 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/alexedwards/argon2id"
@@ -72,4 +75,21 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 		return uuid.Nil, err
 	}
 	return finalID, nil
+}
+
+
+// Save a token to the server to save time for user login after initial auth (until expiration)
+func GetBearerToken(header http.Header) (string, error) {
+	h := header.Get("Authorization")
+	if h == "" {
+		return "", errors.New("missing Authorization header")
+	}
+
+	if !strings.HasPrefix(h, "Bearer") {
+		return "", errors.New("wrong prefix >:(")
+	}
+
+	h_sliced := strings.TrimPrefix(h, "Bearer ")
+
+	return h_sliced, nil
 }
