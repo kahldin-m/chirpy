@@ -36,6 +36,7 @@ func main() {
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
 	plat := os.Getenv("PLATFORM")
+	secret := os.Getenv("SECRET")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("Failed to Open postgres: %v", err)
@@ -49,6 +50,7 @@ func main() {
 		fileserverHits: atomic.Int32{},
 		db: dbQueries,
 		platform: plat,
+		serverSecret: secret,
 	}
 
 	mux := http.NewServeMux()
