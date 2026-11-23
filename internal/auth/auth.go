@@ -38,7 +38,7 @@ func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (str
 
 	now := time.Now().UTC()
 	expiry := now.Add(expiresIn)
-	
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		Issuer: "chirpy-access",
 		Subject: uuid.UUID.String(userID),

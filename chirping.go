@@ -7,6 +7,7 @@ import (
 	"time"
 	"github.com/google/uuid"
 
+	"chirpy/internal/auth"
 	"chirpy/internal/database"
 )
 
@@ -22,8 +23,7 @@ func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type parameters struct {
 		Body string `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
-    }
+	}
 
     // decoding both fields in parameters
     decoder := json.NewDecoder(r.Body)
@@ -39,21 +39,35 @@ func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
    		respondWithError(w, 400, "Chirp is too long")
      	return
     }
+
+    tknString, err := auth.GetBearerToken(r.Header)
+    if err != nil {
+    	respondWithError(w, 400, "Error getting bearer token")
+     	return
+    }
+
+    validID, err := auth.ValidateJWT(tknString, cfg.serverSecret)
+    if err != nil {
+    	respondWithError(w, http.StatusUnauthorized, "Unauthorized user")
+     	return
+    }
+    
     cleanedChirp := cleanChirp(params.Body)
     finalChirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
     	Body: cleanedChirp,
-     	UserID: params.UserID,
+     	UserID: validID,
     })
     if err != nil {
     	respondWithError(w, 400, "Error creating chirp")
      	return
     }
+    
     respondWithJSON(w, 201, returnVals{
     	ID: finalChirp.ID,
      	CreatedAt: finalChirp.CreatedAt,
       	UpdatedAt: finalChirp.UpdatedAt,
       	Body: finalChirp.Body,
-      	UserID: finalChirp.UserID,
+      	UserID: validID,
     })
     return
 }
@@ -98,5 +112,5 @@ func (cfg *apiConfig) handlerGetChirpByID(w http.ResponseWriter, r *http.Request
 		UserID: chirp.UserID,
 	}
 	respondWithJSON(w, 200, result)
-	return	
+	return
 }

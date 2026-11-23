@@ -19,6 +19,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
 	platform       string
+	serverSecret   string
 }
 
 // global struct for storing User data
@@ -27,6 +28,7 @@ type User struct {
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 	Email      string    `json:"email"`
+	Token	   string    `json:"token"`
 }
 
 

@@ -12,6 +12,7 @@ import (
 type parameters struct {
 	Password   string `json:"password"`
 	Email      string `json:"email"`
+	ExpiresInSeconds int `json:"expires_in_seconds"`
 }
 
 
@@ -29,7 +30,7 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, http.StatusInternalServerError, "Hashing failed. Blame the salt mines")
 		return
 	}
-	
+
 	user, err := cfg.db.CreateUser(r.Context(), database.CreateUserParams{
 		HashedPassword: pword,
 		Email: params.Email,
