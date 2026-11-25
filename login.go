@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"chirpy/internal/auth"
+	"chirpy/internal/database"
 )
 
 
@@ -24,11 +25,6 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expirationTime := time.Hour
-	givenExpiration := time.Duration(params.ExpiresInSeconds) * time.Second
-	if  givenExpiration > 0 && givenExpiration < 3600  {
-		expirationTime = givenExpiration
-	}
 
 	pass, err := auth.CheckPasswordHash(params.Password, user.HashedPassword)
 	if !pass || err != nil {
@@ -36,18 +32,29 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.MakeJWT(user.ID, cfg.serverSecret, expirationTime)
+	token, err := auth.MakeJWT(user.ID, cfg.serverSecret, time.Hour)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Error ocurred")
+		respondWithError(w, http.StatusInternalServerError, "Error ocurred")
 		return
 	}
 
-
+	refreshTknStr := auth.MakeRefreshToken()
+	_, err = cfg.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token: refreshTknStr,
+		UserID: user.ID,
+		ExpiresAt: time.Now().Add(60 * 24 * time.Hour),
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error creating refresh token")
+		return
+	}
+	
 	respondWithJSON(w, http.StatusOK, User{
 		ID: user.ID,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 		Email: user.Email,
 		Token: token,
+		RefreshToken: refreshTknStr,
 	})
 }
